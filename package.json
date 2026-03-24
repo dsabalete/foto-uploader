@@ -1,0 +1,17 @@
+{
+  "name": "foto-uploader",
+  "version": "1.0.0",
+  "description": "Aplicacion web para subir fotos a AWS S3 usando URLs firmadas",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.873.0",
+    "@aws-sdk/s3-request-presigner": "^3.873.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2"
+  }
+}
