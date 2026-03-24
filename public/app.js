@@ -5,6 +5,7 @@ const passwordInput = document.getElementById("passwordInput");
 const loginBtn = document.getElementById("loginBtn");
 const authStatus = document.getElementById("authStatus");
 const logoutBtn = document.getElementById("logoutBtn");
+const destinationSelect = document.getElementById("destinationSelect");
 
 const fileInput = document.getElementById("fileInput");
 const folderInput = document.getElementById("folderInput");
@@ -21,27 +22,84 @@ let selectedFiles = [];
 let selectionMode = "none";
 let authenticated = false;
 
-const IMAGE_EXTENSIONS = new Set([
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".gif",
-  ".webp",
-  ".bmp",
-  ".tif",
-  ".tiff",
-  ".avif",
-  ".heic"
-]);
+const MEDIA_EXTENSIONS = {
+  image: new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".avif", ".heic"]),
+  video: new Set([".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv", ".wmv", ".mpeg", ".mpg"])
+};
+
+const MEDIA_PREFIX = {
+  image: "image/",
+  video: "video/"
+};
+
+const MEDIA_LABELS = {
+  image: "imágenes",
+  video: "vídeos"
+};
+
+function getSelectedDestination() {
+  return destinationSelect.value === "video" ? "video" : "image";
+}
+
+function updateAcceptedTypes() {
+  const acceptValue = getSelectedDestination() === "video" ? "video/*" : "image/*";
+  fileInput.setAttribute("accept", acceptValue);
+  folderInput.setAttribute("accept", acceptValue);
+}
 
 function getRelativePath(file) {
   return file.webkitRelativePath || file.name;
 }
 
-function isImageFile(file) {
+function inferResolvedContentType(file) {
+  const destination = getSelectedDestination();
+  if (typeof file.type === "string" && file.type.startsWith(MEDIA_PREFIX[destination])) {
+    return file.type;
+  }
+
+  const lowerName = file.name.toLowerCase();
+  const dotIndex = lowerName.lastIndexOf(".");
+  if (dotIndex === -1) {
+    return "";
+  }
+
+  const extension = lowerName.slice(dotIndex);
+  if (MEDIA_EXTENSIONS[destination].has(extension)) {
+    return destination === "video"
+      ? {
+          ".mp4": "video/mp4",
+          ".mov": "video/quicktime",
+          ".webm": "video/webm",
+          ".m4v": "video/x-m4v",
+          ".avi": "video/x-msvideo",
+          ".mkv": "video/x-matroska",
+          ".wmv": "video/x-ms-wmv",
+          ".mpeg": "video/mpeg",
+          ".mpg": "video/mpeg"
+        }[extension] || ""
+      : {
+          ".jpg": "image/jpeg",
+          ".jpeg": "image/jpeg",
+          ".png": "image/png",
+          ".gif": "image/gif",
+          ".webp": "image/webp",
+          ".bmp": "image/bmp",
+          ".tif": "image/tiff",
+          ".tiff": "image/tiff",
+          ".avif": "image/avif",
+          ".heic": "image/heic"
+        }[extension] || "";
+  }
+
+  return "";
+}
+
+function isSupportedMediaFile(file) {
   if (!file) return false;
 
-  if (typeof file.type === "string" && file.type.startsWith("image/")) {
+  const destination = getSelectedDestination();
+  const prefix = MEDIA_PREFIX[destination];
+  if (typeof file.type === "string" && file.type.startsWith(prefix)) {
     return true;
   }
 
@@ -49,7 +107,7 @@ function isImageFile(file) {
   const dotIndex = lowerName.lastIndexOf(".");
   if (dotIndex === -1) return false;
 
-  return IMAGE_EXTENSIONS.has(lowerName.slice(dotIndex));
+  return MEDIA_EXTENSIONS[destination].has(lowerName.slice(dotIndex));
 }
 
 function resetOutput() {
@@ -77,14 +135,14 @@ function updateSelectionLabel() {
 
 function setSelection(files, mode) {
   const allFiles = Array.from(files ?? []);
-  selectedFiles = allFiles.filter(isImageFile);
+  selectedFiles = allFiles.filter(isSupportedMediaFile);
   selectionMode = mode;
   uploadBtn.disabled = selectedFiles.length === 0;
   updateSelectionLabel();
 
   if (selectedFiles.length === 0) {
     resetOutput();
-    statusEl.textContent = "Selecciona imágenes sueltas o una carpeta con imágenes.";
+    statusEl.textContent = `Selecciona ${MEDIA_LABELS[getSelectedDestination()]} sueltos o una carpeta con ${MEDIA_LABELS[getSelectedDestination()]}.`;
     return;
   }
 
@@ -103,7 +161,7 @@ function setSelection(files, mode) {
       : "Se mantendrá el nombre original de cada archivo.";
 
   if (skippedFiles > 0) {
-    summaryEl.textContent += ` Se omitieron ${skippedFiles} archivo(s) que no eran imágenes.`;
+    summaryEl.textContent += ` Se omitieron ${skippedFiles} archivo(s) que no correspondían al tipo seleccionado.`;
   }
 }
 
@@ -114,6 +172,7 @@ function setAuthenticatedState(value) {
   if (value) {
     authStatus.textContent = "";
     passwordInput.value = "";
+    updateAcceptedTypes();
   } else {
     selectedFiles = [];
     selectionMode = "none";
@@ -136,6 +195,18 @@ async function refreshSession() {
   const data = await response.json().catch(() => ({}));
   setAuthenticatedState(Boolean(data.authenticated));
 }
+
+destinationSelect.addEventListener("change", () => {
+  updateAcceptedTypes();
+  selectedFiles = [];
+  selectionMode = "none";
+  uploadBtn.disabled = true;
+  fileInput.value = "";
+  folderInput.value = "";
+  resetOutput();
+  updateSelectionLabel();
+  statusEl.textContent = `Destino cambiado a ${MEDIA_LABELS[getSelectedDestination()]}.`;
+});
 
 pickFilesBtn.addEventListener("click", () => {
   fileInput.click();
@@ -205,6 +276,7 @@ logoutBtn.addEventListener("click", async () => {
 uploadBtn.addEventListener("click", async () => {
   if (!authenticated || selectedFiles.length === 0) return;
 
+  const destination = getSelectedDestination();
   uploadBtn.disabled = true;
   progressEl.hidden = false;
   progressEl.value = 0;
@@ -217,6 +289,7 @@ uploadBtn.addEventListener("click", async () => {
     for (let index = 0; index < selectedFiles.length; index += 1) {
       const file = selectedFiles[index];
       const relativePath = getRelativePath(file);
+      const resolvedContentType = inferResolvedContentType(file);
 
       statusEl.textContent = `Solicitando URL firmada para ${relativePath}...`;
 
@@ -226,8 +299,9 @@ uploadBtn.addEventListener("click", async () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fileName: file.name,
-          fileType: file.type || null,
-          relativePath
+          fileType: resolvedContentType || null,
+          relativePath,
+          destination
         })
       });
 
@@ -245,8 +319,8 @@ uploadBtn.addEventListener("click", async () => {
       statusEl.textContent = `Subiendo ${relativePath}...`;
 
       const headers = {};
-      if (file.type) {
-        headers["Content-Type"] = file.type;
+      if (resolvedContentType) {
+        headers["Content-Type"] = resolvedContentType;
       }
 
       const uploadRes = await fetch(uploadUrl, {
@@ -264,7 +338,7 @@ uploadBtn.addEventListener("click", async () => {
     }
 
     statusEl.textContent = "Subida completada con éxito.";
-    summaryEl.textContent = `${uploadedKeys.length} archivo(s) subido(s) manteniendo estructura y nombres.`;
+    summaryEl.textContent = `${uploadedKeys.length} archivo(s) subido(s) manteniendo estructura y nombres en el bucket de ${MEDIA_LABELS[destination]}.`;
     objectLink.textContent = uploadedKeys.length ? `Último objeto subido: ${uploadedKeys.at(-1)}` : "";
   } catch (error) {
     statusEl.textContent = `Error: ${error.message}`;
@@ -277,5 +351,6 @@ uploadBtn.addEventListener("click", async () => {
   }
 });
 
+updateAcceptedTypes();
 updateSelectionLabel();
 refreshSession().catch(() => setAuthenticatedState(false));

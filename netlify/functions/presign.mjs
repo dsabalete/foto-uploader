@@ -54,6 +54,56 @@ function inferImageContentType(fileName) {
   }
 }
 
+function inferVideoContentType(fileName) {
+  const extension = path.posix.extname(String(fileName).toLowerCase());
+
+  switch (extension) {
+    case ".mp4":
+      return "video/mp4";
+    case ".mov":
+      return "video/quicktime";
+    case ".webm":
+      return "video/webm";
+    case ".m4v":
+      return "video/x-m4v";
+    case ".avi":
+      return "video/x-msvideo";
+    case ".mkv":
+      return "video/x-matroska";
+    case ".wmv":
+      return "video/x-ms-wmv";
+    case ".mpeg":
+    case ".mpg":
+      return "video/mpeg";
+    default:
+      return null;
+  }
+}
+
+function inferMediaContentType(fileName) {
+  return inferImageContentType(fileName) || inferVideoContentType(fileName);
+}
+
+function inferMediaKind(fileName, contentType) {
+  const resolvedContentType =
+    contentType && (contentType.startsWith("image/") || contentType.startsWith("video/"))
+      ? contentType
+      : inferMediaContentType(fileName);
+  if (!resolvedContentType) {
+    return null;
+  }
+
+  if (resolvedContentType.startsWith("image/")) {
+    return "image";
+  }
+
+  if (resolvedContentType.startsWith("video/")) {
+    return "video";
+  }
+
+  return null;
+}
+
 function getEnv(name, fallbackNames = []) {
   if (process.env[name]) {
     return process.env[name];
@@ -71,7 +121,8 @@ function getEnv(name, fallbackNames = []) {
 const region = getEnv("S3_REGION", ["AWS_REGION"]);
 const accessKeyId = getEnv("S3_ACCESS_KEY_ID", ["AWS_ACCESS_KEY_ID"]);
 const secretAccessKey = getEnv("S3_SECRET_ACCESS_KEY", ["AWS_SECRET_ACCESS_KEY"]);
-const bucketName = getEnv("S3_BUCKET_NAME");
+const imageBucketName = getEnv("S3_IMAGE_BUCKET_NAME");
+const videoBucketName = getEnv("S3_VIDEO_BUCKET_NAME");
 
 const s3 = new S3Client({
   region,
@@ -101,11 +152,11 @@ export default async function handler(request) {
       });
     }
 
-    if (!bucketName || !region || !accessKeyId || !secretAccessKey) {
+    if (!imageBucketName || !videoBucketName || !region || !accessKeyId || !secretAccessKey) {
       return new Response(
         JSON.stringify({
           error:
-            "Faltan variables de entorno: S3_BUCKET_NAME, S3_REGION, S3_ACCESS_KEY_ID o S3_SECRET_ACCESS_KEY"
+            "Faltan variables de entorno: S3_IMAGE_BUCKET_NAME, S3_VIDEO_BUCKET_NAME, S3_REGION, S3_ACCESS_KEY_ID o S3_SECRET_ACCESS_KEY"
         }),
         {
           status: 500,
@@ -115,7 +166,7 @@ export default async function handler(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { fileName, fileType, relativePath } = body;
+    const { fileName, fileType, relativePath, destination } = body;
 
     if (!fileName) {
       return new Response(JSON.stringify({ error: "Debes enviar fileName" }), {
@@ -132,15 +183,37 @@ export default async function handler(request) {
       });
     }
 
-    const resolvedContentType = fileType || inferImageContentType(keyPath);
-    if (!resolvedContentType || !resolvedContentType.startsWith("image/")) {
-      return new Response(JSON.stringify({ error: "Solo se permiten imagenes" }), {
+    const mediaKind = inferMediaKind(keyPath, fileType);
+    if (!mediaKind) {
+      return new Response(JSON.stringify({ error: "Solo se permiten imagenes o videos" }), {
         status: 400,
         headers: { "Content-Type": "application/json" }
       });
     }
 
     const key = keyPath;
+    const selectedDestination = destination === "video" ? "video" : "image";
+    const bucketName = selectedDestination === "video" ? videoBucketName : imageBucketName;
+    const resolvedContentType =
+      fileType && (fileType.startsWith("image/") || fileType.startsWith("video/"))
+        ? fileType
+        : inferMediaContentType(keyPath);
+
+    if (selectedDestination !== mediaKind) {
+      return new Response(
+        JSON.stringify({
+          error:
+            selectedDestination === "video"
+              ? "La carpeta o archivo no es un video válido"
+              : "La carpeta o archivo no es una imagen válida"
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+    }
+
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: key,
@@ -154,7 +227,8 @@ export default async function handler(request) {
         uploadUrl,
         key,
         bucket: bucketName,
-        region
+        region,
+        destination: selectedDestination
       }),
       {
         headers: { "Content-Type": "application/json" }

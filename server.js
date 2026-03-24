@@ -17,7 +17,7 @@ const requiredEnv = [
   "S3_REGION",
   "S3_ACCESS_KEY_ID",
   "S3_SECRET_ACCESS_KEY",
-  "S3_BUCKET_NAME"
+  "S3_VIDEO_BUCKET_NAME"
 ];
 
 const missing = requiredEnv.filter((name) => !process.env[name]);
@@ -199,6 +199,56 @@ function inferImageContentType(fileName) {
   }
 }
 
+function inferVideoContentType(fileName) {
+  const extension = path.posix.extname(String(fileName).toLowerCase());
+
+  switch (extension) {
+    case ".mp4":
+      return "video/mp4";
+    case ".mov":
+      return "video/quicktime";
+    case ".webm":
+      return "video/webm";
+    case ".m4v":
+      return "video/x-m4v";
+    case ".avi":
+      return "video/x-msvideo";
+    case ".mkv":
+      return "video/x-matroska";
+    case ".wmv":
+      return "video/x-ms-wmv";
+    case ".mpeg":
+    case ".mpg":
+      return "video/mpeg";
+    default:
+      return null;
+  }
+}
+
+function inferMediaContentType(fileName) {
+  return inferImageContentType(fileName) || inferVideoContentType(fileName);
+}
+
+function inferMediaKind(fileName, contentType) {
+  const resolvedContentType =
+    contentType && (contentType.startsWith("image/") || contentType.startsWith("video/"))
+      ? contentType
+      : inferMediaContentType(fileName);
+  if (!resolvedContentType) {
+    return null;
+  }
+
+  if (resolvedContentType.startsWith("image/")) {
+    return "image";
+  }
+
+  if (resolvedContentType.startsWith("video/")) {
+    return "video";
+  }
+
+  return null;
+}
+
 app.post("/api/s3/presign", async (req, res) => {
   try {
     if (!requireAuth(req, res)) {
@@ -220,17 +270,45 @@ app.post("/api/s3/presign", async (req, res) => {
       });
     }
 
-    const resolvedContentType = fileType || inferImageContentType(keyPath);
-    if (!resolvedContentType || !resolvedContentType.startsWith("image/")) {
+    const key = keyPath;
+    const requestedDestination = String(req.body?.destination || "image").toLowerCase();
+    const destination = requestedDestination === "video" ? "video" : "image";
+    const bucketName =
+      destination === "video"
+        ? process.env.S3_VIDEO_BUCKET_NAME || ""
+        : process.env.S3_IMAGE_BUCKET_NAME || "";
+    const resolvedContentType =
+      fileType && (fileType.startsWith("image/") || fileType.startsWith("video/"))
+        ? fileType
+        : inferMediaContentType(keyPath);
+    const mediaKind = inferMediaKind(keyPath, resolvedContentType);
+
+    if (!mediaKind) {
       return res.status(400).json({
-        error: "Solo se permiten imagenes"
+        error: "Solo se permiten imagenes o videos"
       });
     }
 
-    const key = keyPath;
+    if (destination !== mediaKind) {
+      return res.status(400).json({
+        error:
+          destination === "video"
+            ? "La carpeta o archivo no es un video valido"
+            : "La carpeta o archivo no es una imagen valida"
+      });
+    }
+
+    if (!bucketName) {
+      return res.status(500).json({
+        error:
+          destination === "video"
+            ? "Falta S3_VIDEO_BUCKET_NAME en el entorno"
+            : "Falta S3_IMAGE_BUCKET_NAME en el entorno"
+      });
+    }
 
     const commandInput = {
-      Bucket: process.env.S3_BUCKET_NAME,
+      Bucket: bucketName,
       Key: key
     };
 
@@ -245,8 +323,9 @@ app.post("/api/s3/presign", async (req, res) => {
     res.json({
       uploadUrl,
       key,
-      bucket: process.env.S3_BUCKET_NAME,
-      region: process.env.S3_REGION || process.env.AWS_REGION
+      bucket: bucketName,
+      region: process.env.S3_REGION || process.env.AWS_REGION,
+      destination
     });
   } catch (error) {
     console.error("Error generando URL firmada:", error);

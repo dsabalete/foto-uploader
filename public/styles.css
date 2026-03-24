@@ -52,6 +52,7 @@ h1 {
   gap: 6px;
   color: #0f172a;
   font-size: 0.95rem;
+  margin-bottom: 14px;
 }
 
 .field input {
@@ -60,6 +61,15 @@ h1 {
   border-radius: 10px;
   padding: 12px 14px;
   font: inherit;
+}
+
+.field select {
+  width: 100%;
+  border: 1px solid #cfd8e3;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font: inherit;
+  background: white;
 }
 
 .ghost {

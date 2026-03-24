@@ -4,6 +4,7 @@ Aplicación web sencilla para subir imágenes a un bucket S3 con **URL firmada**
 La app permite seleccionar archivos o carpetas completas y conserva la estructura original en la raíz del bucket.
 En Netlify, el frontend se publica como sitio estático y el endpoint de firma vive en una Netlify Function.
 Además, el acceso está protegido con una contraseña propia configurada por variables de entorno.
+Ahora puedes elegir entre un bucket de imágenes y otro de vídeos.
 
 ## Requisitos
 
@@ -26,7 +27,8 @@ HOST=127.0.0.1
 S3_REGION=eu-west-1
 S3_ACCESS_KEY_ID=TU_ACCESS_KEY
 S3_SECRET_ACCESS_KEY=TU_SECRET_KEY
-S3_BUCKET_NAME=tu-bucket
+S3_IMAGE_BUCKET_NAME=tu-bucket-imagenes
+S3_VIDEO_BUCKET_NAME=tu-bucket-videos
 APP_PASSWORD=una_contraseña_larga
 APP_AUTH_SECRET=una_clave_secreta_larga_y_aleatoria
 ```
@@ -42,7 +44,12 @@ Usa una policy como esta en el usuario IAM que usará la Function:
     {
       "Effect": "Allow",
       "Action": ["s3:PutObject"],
-        "Resource": "arn:aws:s3:::tu-bucket/*"
+      "Resource": "arn:aws:s3:::tu-bucket-imagenes/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": "arn:aws:s3:::tu-bucket-videos/*"
     }
   ]
 }
@@ -87,7 +94,8 @@ Usa estos nombres personalizados:
 S3_REGION=eu-west-1
 S3_ACCESS_KEY_ID=...
 S3_SECRET_ACCESS_KEY=...
-S3_BUCKET_NAME=...
+S3_IMAGE_BUCKET_NAME=...
+S3_VIDEO_BUCKET_NAME=...
 APP_PASSWORD=...
 APP_AUTH_SECRET=...
 ```

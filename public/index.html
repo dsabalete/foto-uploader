@@ -30,10 +30,20 @@
         <div>
           <h1>Subir fotos a Amazon S3</h1>
           <p class="subtitle">
-            Selecciona archivos sueltos o una carpeta completa y súbelos usando URL firmada.
+            Selecciona archivos sueltos o una carpeta completa y elige el bucket de destino.
           </p>
         </div>
         <button id="logoutBtn" type="button" class="ghost">Salir</button>
+      </div>
+
+      <div class="field">
+        <label>
+          <span>Destino</span>
+          <select id="destinationSelect">
+            <option value="image">Bucket de imágenes</option>
+            <option value="video">Bucket de vídeos</option>
+          </select>
+        </label>
       </div>
 
       <div class="actions">
@@ -41,8 +51,8 @@
         <button id="pickFolderBtn" type="button">Elegir carpeta</button>
       </div>
 
-      <input id="fileInput" type="file" accept="image/*" multiple hidden />
-      <input id="folderInput" type="file" accept="image/*" multiple webkitdirectory hidden />
+      <input id="fileInput" type="file" accept="image/*,video/*" multiple hidden />
+      <input id="folderInput" type="file" accept="image/*,video/*" multiple webkitdirectory hidden />
 
       <button id="uploadBtn" disabled>Subir archivos</button>
 
