@@ -1,27 +1,30 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Subidor de Fotos S3</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="card">
-      <h1>Subir foto a Amazon S3</h1>
-      <p class="subtitle">
-        Selecciona una imagen o una carpeta completa y súbela usando URL firmada.
-      </p>
 
-      <input id="fileInput" type="file" accept="image/*" multiple webkitdirectory />
-      <button id="uploadBtn" disabled>Subir archivos</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subidor de Fotos S3</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
 
-      <progress id="progress" max="100" value="0" hidden></progress>
-      <p id="status" class="status"></p>
-      <p id="summary" class="summary"></p>
-      <a id="objectLink" target="_blank" rel="noreferrer"></a>
-    </main>
+<body>
+  <main class="card">
+    <h1>Subir fotos a Amazon S3</h1>
+    <p class="subtitle">
+      Selecciona una imagen o una carpeta completa y súbela usando URL firmada.
+    </p>
 
-    <script src="app.js"></script>
-  </body>
+    <input id="fileInput" type="file" accept="image/*" multiple webkitdirectory />
+    <button id="uploadBtn" disabled>Subir archivos</button>
+
+    <progress id="progress" max="100" value="0" hidden></progress>
+    <p id="status" class="status"></p>
+    <p id="summary" class="summary"></p>
+    <a id="objectLink" target="_blank" rel="noreferrer"></a>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+
 </html>

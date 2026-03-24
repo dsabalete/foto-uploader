@@ -110,7 +110,7 @@ app.post("/api/s3/presign", async (req, res) => {
       });
     }
 
-    const key = `uploads/${keyPath}`;
+    const key = keyPath;
 
     const commandInput = {
       Bucket: process.env.S3_BUCKET_NAME,

@@ -1,7 +1,7 @@
 # Foto Uploader a AWS S3
 
 Aplicación web sencilla para subir imágenes a un bucket S3 con **URL firmada**.
-La app permite seleccionar archivos o carpetas completas y conserva la estructura original en S3.
+La app permite seleccionar archivos o carpetas completas y conserva la estructura original en la raíz del bucket.
 
 ## Requisitos
 
@@ -38,7 +38,7 @@ Usa una policy como esta (cambiando el nombre del bucket):
     {
       "Effect": "Allow",
       "Action": ["s3:PutObject"],
-      "Resource": "arn:aws:s3:::tu-bucket/*"
+        "Resource": "arn:aws:s3:::tu-bucket/*"
     }
   ]
 }
