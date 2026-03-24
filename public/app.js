@@ -7,8 +7,35 @@ const objectLink = document.getElementById("objectLink");
 
 let selectedFiles = [];
 
+const IMAGE_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".tif",
+  ".tiff",
+  ".avif",
+  ".heic"
+]);
+
 function getRelativePath(file) {
   return file.webkitRelativePath || file.name;
+}
+
+function isImageFile(file) {
+  if (!file) return false;
+
+  if (typeof file.type === "string" && file.type.startsWith("image/")) {
+    return true;
+  }
+
+  const lowerName = file.name.toLowerCase();
+  const dotIndex = lowerName.lastIndexOf(".");
+  if (dotIndex === -1) return false;
+
+  return IMAGE_EXTENSIONS.has(lowerName.slice(dotIndex));
 }
 
 function resetOutput() {
@@ -19,15 +46,17 @@ function resetOutput() {
 }
 
 fileInput.addEventListener("change", () => {
-  selectedFiles = Array.from(fileInput.files ?? []);
+  const allFiles = Array.from(fileInput.files ?? []);
+  selectedFiles = allFiles.filter(isImageFile);
   uploadBtn.disabled = selectedFiles.length === 0;
 
   if (selectedFiles.length === 0) {
     resetOutput();
-    statusEl.textContent = "Selecciona una imagen o una carpeta.";
+    statusEl.textContent = "Selecciona una imagen o una carpeta con imágenes.";
     return;
   }
 
+  const skippedFiles = allFiles.length - selectedFiles.length;
   const folderCount = new Set(
     selectedFiles
       .map((file) => file.webkitRelativePath)
@@ -39,6 +68,10 @@ fileInput.addEventListener("change", () => {
   summaryEl.textContent = selectedFiles.some((file) => file.webkitRelativePath)
     ? `Se mantendrá la estructura de carpetas detectada${folderCount ? ` en ${folderCount} carpeta(s)` : ""}.`
     : "Se mantendrá el nombre original de cada archivo.";
+
+  if (skippedFiles > 0) {
+    summaryEl.textContent += ` Se omitieron ${skippedFiles} archivo(s) que no eran imágenes.`;
+  }
 });
 
 uploadBtn.addEventListener("click", async () => {
