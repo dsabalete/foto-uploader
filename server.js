@@ -1,4 +1,5 @@
 const path = require("path");
+const crypto = require("crypto");
 const express = require("express");
 const dotenv = require("dotenv");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
@@ -9,6 +10,8 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
+const authPassword = process.env.APP_PASSWORD || "";
+const authSecret = process.env.APP_AUTH_SECRET || "";
 
 const requiredEnv = [
   "S3_REGION",
@@ -35,6 +38,115 @@ const s3 = new S3Client({
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+function base64UrlEncode(value) {
+  return Buffer.from(value).toString("base64url");
+}
+
+function base64UrlDecode(value) {
+  return Buffer.from(value, "base64url").toString("utf8");
+}
+
+function parseCookieHeader(cookieHeader) {
+  if (typeof cookieHeader !== "string" || !cookieHeader.trim()) {
+    return {};
+  }
+
+  return cookieHeader.split(";").reduce((acc, pair) => {
+    const [rawKey, ...rawValue] = pair.split("=");
+    const key = rawKey.trim();
+    const value = rawValue.join("=").trim();
+    if (key) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+}
+
+function createSessionToken() {
+  const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 7;
+  const payload = JSON.stringify({ expiresAt });
+  const body = base64UrlEncode(payload);
+  const signature = crypto
+    .createHmac("sha256", authSecret)
+    .update(body)
+    .digest("base64url");
+
+  return `${body}.${signature}`;
+}
+
+function verifySessionToken(token) {
+  if (!authSecret || !authPassword || typeof token !== "string") {
+    return false;
+  }
+
+  const [body, signature] = token.split(".");
+  if (!body || !signature) {
+    return false;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", authSecret)
+    .update(body)
+    .digest("base64url");
+
+  if (
+    signature.length !== expectedSignature.length ||
+    !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+  ) {
+    return false;
+  }
+
+  try {
+    const payload = JSON.parse(base64UrlDecode(body));
+    return Boolean(payload.expiresAt && Date.now() <= payload.expiresAt);
+  } catch {
+    return false;
+  }
+}
+
+function buildAuthCookie(token) {
+  return `fu_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`;
+}
+
+function buildClearAuthCookie() {
+  return "fu_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+}
+
+function requireAuth(req, res) {
+  const cookies = parseCookieHeader(req.headers.cookie);
+  if (!verifySessionToken(cookies.fu_session)) {
+    res.status(401).json({ error: "No autorizado" });
+    return false;
+  }
+  return true;
+}
+
+app.post("/api/auth/login", (req, res) => {
+  if (!authPassword || !authSecret) {
+    return res.status(500).json({
+      error: "Faltan variables APP_PASSWORD o APP_AUTH_SECRET"
+    });
+  }
+
+  const submittedPassword = String(req.body?.password || "");
+  if (submittedPassword !== authPassword) {
+    return res.status(401).json({ error: "Contraseña incorrecta" });
+  }
+
+  return res
+    .set("Set-Cookie", buildAuthCookie(createSessionToken()))
+    .json({ authenticated: true });
+});
+
+app.get("/api/auth/session", (req, res) => {
+  const cookies = parseCookieHeader(req.headers.cookie);
+  res.json({ authenticated: verifySessionToken(cookies.fu_session) });
+});
+
+app.post("/api/auth/logout", (_req, res) => {
+  return res.set("Set-Cookie", buildClearAuthCookie()).json({ ok: true });
+});
 
 function sanitizeRelativeKey(relativePath) {
   if (typeof relativePath !== "string") {
@@ -89,6 +201,10 @@ function inferImageContentType(fileName) {
 
 app.post("/api/s3/presign", async (req, res) => {
   try {
+    if (!requireAuth(req, res)) {
+      return;
+    }
+
     const { fileName, fileType, relativePath } = req.body || {};
 
     if (!fileName) {

@@ -4,24 +4,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Subidor de Fotos S3</title>
+  <title>Foto-uploader</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
-  <main class="card">
-    <h1>Subir fotos a Amazon S3</h1>
-    <p class="subtitle">
-      Selecciona una imagen o una carpeta completa y súbela usando URL firmada.
-    </p>
+  <main class="shell">
+    <section class="card auth-card" id="authCard">
+      <h1>Acceso privado</h1>
+      <p class="subtitle">Introduce la contraseña para usar el subidor de fotos.</p>
 
-    <input id="fileInput" type="file" accept="image/*" multiple webkitdirectory />
-    <button id="uploadBtn" disabled>Subir archivos</button>
+      <form id="loginForm" class="login-form">
+        <label class="field">
+          <span>Contraseña</span>
+          <input id="passwordInput" type="password" autocomplete="current-password" />
+        </label>
+        <button id="loginBtn" type="submit">Entrar</button>
+      </form>
 
-    <progress id="progress" max="100" value="0" hidden></progress>
-    <p id="status" class="status"></p>
-    <p id="summary" class="summary"></p>
-    <a id="objectLink" target="_blank" rel="noreferrer"></a>
+      <p id="authStatus" class="status"></p>
+    </section>
+
+    <main class="card app-card" id="appCard" hidden>
+      <div class="card-header">
+        <div>
+          <h1>Subir fotos a Amazon S3</h1>
+          <p class="subtitle">
+            Selecciona archivos sueltos o una carpeta completa y súbelos usando URL firmada.
+          </p>
+        </div>
+        <button id="logoutBtn" type="button" class="ghost">Salir</button>
+      </div>
+
+      <div class="actions">
+        <button id="pickFilesBtn" type="button">Elegir archivos</button>
+        <button id="pickFolderBtn" type="button">Elegir carpeta</button>
+      </div>
+
+      <input id="fileInput" type="file" accept="image/*" multiple hidden />
+      <input id="folderInput" type="file" accept="image/*" multiple webkitdirectory hidden />
+
+      <button id="uploadBtn" disabled>Subir archivos</button>
+
+      <p id="selection" class="selection"></p>
+      <progress id="progress" max="100" value="0" hidden></progress>
+      <p id="status" class="status"></p>
+      <p id="summary" class="summary"></p>
+      <a id="objectLink" target="_blank" rel="noreferrer"></a>
+    </main>
   </main>
 
   <script src="app.js"></script>

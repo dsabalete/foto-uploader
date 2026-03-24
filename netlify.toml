@@ -1,3 +1,23 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/s3/presign"
+  to = "/.netlify/functions/presign"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/login"
+  to = "/.netlify/functions/auth-login"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/session"
+  to = "/.netlify/functions/auth-session"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/logout"
+  to = "/.netlify/functions/auth-logout"
+  status = 200

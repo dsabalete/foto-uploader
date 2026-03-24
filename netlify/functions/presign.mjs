@@ -1,6 +1,7 @@
 import path from "node:path";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getSessionFromRequest } from "./_auth.mjs";
 
 function sanitizeRelativeKey(relativePath) {
   if (typeof relativePath !== "string") {
@@ -93,6 +94,13 @@ export default async function handler(request) {
   }
 
   try {
+    if (!getSessionFromRequest(request)) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     if (!bucketName || !region || !accessKeyId || !secretAccessKey) {
       return new Response(
         JSON.stringify({

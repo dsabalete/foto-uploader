@@ -3,6 +3,7 @@
 Aplicación web sencilla para subir imágenes a un bucket S3 con **URL firmada**.
 La app permite seleccionar archivos o carpetas completas y conserva la estructura original en la raíz del bucket.
 En Netlify, el frontend se publica como sitio estático y el endpoint de firma vive en una Netlify Function.
+Además, el acceso está protegido con una contraseña propia configurada por variables de entorno.
 
 ## Requisitos
 
@@ -26,6 +27,8 @@ S3_REGION=eu-west-1
 S3_ACCESS_KEY_ID=TU_ACCESS_KEY
 S3_SECRET_ACCESS_KEY=TU_SECRET_KEY
 S3_BUCKET_NAME=tu-bucket
+APP_PASSWORD=una_contraseña_larga
+APP_AUTH_SECRET=una_clave_secreta_larga_y_aleatoria
 ```
 
 ## 2) Permisos IAM mínimos
@@ -85,7 +88,14 @@ S3_REGION=eu-west-1
 S3_ACCESS_KEY_ID=...
 S3_SECRET_ACCESS_KEY=...
 S3_BUCKET_NAME=...
+APP_PASSWORD=...
+APP_AUTH_SECRET=...
 ```
+
+## Acceso privado
+
+La aplicación pide una contraseña antes de mostrar el formulario de subida.
+La sesión se guarda en una cookie firmada y expira automáticamente.
 
 ## Nota sobre acceso al archivo
 
