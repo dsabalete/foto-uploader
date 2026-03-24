@@ -11,9 +11,9 @@ const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
 
 const requiredEnv = [
-  "AWS_REGION",
-  "AWS_ACCESS_KEY_ID",
-  "AWS_SECRET_ACCESS_KEY",
+  "S3_REGION",
+  "S3_ACCESS_KEY_ID",
+  "S3_SECRET_ACCESS_KEY",
   "S3_BUCKET_NAME"
 ];
 
@@ -25,10 +25,11 @@ if (missing.length > 0) {
 }
 
 const s3 = new S3Client({
-  region: process.env.AWS_REGION,
+  region: process.env.S3_REGION || process.env.AWS_REGION,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ""
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey:
+      process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || ""
   }
 });
 
@@ -129,7 +130,7 @@ app.post("/api/s3/presign", async (req, res) => {
       uploadUrl,
       key,
       bucket: process.env.S3_BUCKET_NAME,
-      region: process.env.AWS_REGION
+      region: process.env.S3_REGION || process.env.AWS_REGION
     });
   } catch (error) {
     console.error("Error generando URL firmada:", error);

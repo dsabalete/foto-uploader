@@ -2,6 +2,7 @@
 
 Aplicación web sencilla para subir imágenes a un bucket S3 con **URL firmada**.
 La app permite seleccionar archivos o carpetas completas y conserva la estructura original en la raíz del bucket.
+En Netlify, el frontend se publica como sitio estático y el endpoint de firma vive en una Netlify Function.
 
 ## Requisitos
 
@@ -21,15 +22,15 @@ Edita `.env` con tus datos:
 ```env
 PORT=3000
 HOST=127.0.0.1
-AWS_REGION=eu-west-1
-AWS_ACCESS_KEY_ID=TU_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY=TU_SECRET_KEY
+S3_REGION=eu-west-1
+S3_ACCESS_KEY_ID=TU_ACCESS_KEY
+S3_SECRET_ACCESS_KEY=TU_SECRET_KEY
 S3_BUCKET_NAME=tu-bucket
 ```
 
 ## 2) Permisos IAM mínimos
 
-Usa una policy como esta (cambiando el nombre del bucket):
+Usa una policy como esta en el usuario IAM que usará la Function:
 
 ```json
 {
@@ -73,6 +74,18 @@ Abre: [http://localhost:3000](http://localhost:3000)
 1. El frontend envía `fileName`, `fileType` y la ruta relativa del archivo al backend.
 2. El backend genera una URL firmada (`PUT`) para S3 usando la ruta original.
 3. El frontend sube el archivo directamente a S3 usando esa URL sin renombrarlo.
+
+## Variables en Netlify
+
+No uses `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` ni `AWS_REGION` en Netlify para esta app.
+Usa estos nombres personalizados:
+
+```env
+S3_REGION=eu-west-1
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_BUCKET_NAME=...
+```
 
 ## Nota sobre acceso al archivo
 
