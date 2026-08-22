@@ -31,6 +31,7 @@ S3_IMAGE_BUCKET_NAME=tu-bucket-imagenes
 S3_VIDEO_BUCKET_NAME=tu-bucket-videos
 APP_PASSWORD=una_contraseña_larga
 APP_AUTH_SECRET=una_clave_secreta_larga_y_aleatoria
+S3_PRESIGN_EXPIRES_IN=180
 ```
 
 ## 2) Permisos IAM mínimos
@@ -98,6 +99,7 @@ S3_IMAGE_BUCKET_NAME=...
 S3_VIDEO_BUCKET_NAME=...
 APP_PASSWORD=...
 APP_AUTH_SECRET=...
+S3_PRESIGN_EXPIRES_IN=180
 ```
 
 ## Acceso privado

@@ -12,11 +12,17 @@ const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
 const authPassword = process.env.APP_PASSWORD || "";
 const authSecret = process.env.APP_AUTH_SECRET || "";
+const presignExpiresIn = Number.parseInt(process.env.S3_PRESIGN_EXPIRES_IN || "180", 10);
+const uploadUrlTtl = Number.isFinite(presignExpiresIn)
+  ? Math.min(Math.max(presignExpiresIn, 60), 900)
+  : 180;
+const secureCookie = process.env.NODE_ENV === "production" ? "; Secure" : "";
 
 const requiredEnv = [
   "S3_REGION",
   "S3_ACCESS_KEY_ID",
   "S3_SECRET_ACCESS_KEY",
+  "S3_IMAGE_BUCKET_NAME",
   "S3_VIDEO_BUCKET_NAME"
 ];
 
@@ -106,11 +112,11 @@ function verifySessionToken(token) {
 }
 
 function buildAuthCookie(token) {
-  return `fu_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`;
+  return `fu_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${secureCookie}`;
 }
 
 function buildClearAuthCookie() {
-  return "fu_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+  return `fu_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureCookie}`;
 }
 
 function requireAuth(req, res) {
@@ -318,7 +324,7 @@ app.post("/api/s3/presign", async (req, res) => {
 
     const command = new PutObjectCommand(commandInput);
 
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: uploadUrlTtl });
 
     res.json({
       uploadUrl,

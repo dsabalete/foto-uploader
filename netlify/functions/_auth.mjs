@@ -100,9 +100,9 @@ export function getSessionFromRequest(request) {
 }
 
 export function buildAuthCookie(token) {
-  return `fu_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`;
+  return `fu_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}; Secure`;
 }
 
 export function buildClearAuthCookie() {
-  return "fu_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+  return "fu_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure";
 }

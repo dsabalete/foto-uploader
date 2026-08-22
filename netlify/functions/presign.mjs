@@ -123,6 +123,10 @@ const accessKeyId = getEnv("S3_ACCESS_KEY_ID", ["AWS_ACCESS_KEY_ID"]);
 const secretAccessKey = getEnv("S3_SECRET_ACCESS_KEY", ["AWS_SECRET_ACCESS_KEY"]);
 const imageBucketName = getEnv("S3_IMAGE_BUCKET_NAME");
 const videoBucketName = getEnv("S3_VIDEO_BUCKET_NAME");
+const configuredPresignExpiresIn = Number.parseInt(getEnv("S3_PRESIGN_EXPIRES_IN"), 10);
+const uploadUrlTtl = Number.isFinite(configuredPresignExpiresIn)
+  ? Math.min(Math.max(configuredPresignExpiresIn, 60), 900)
+  : 180;
 
 const s3 = new S3Client({
   region,
@@ -220,7 +224,7 @@ export default async function handler(request) {
       ContentType: resolvedContentType
     });
 
-    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: uploadUrlTtl });
 
     return new Response(
       JSON.stringify({
